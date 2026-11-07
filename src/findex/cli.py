@@ -70,11 +70,9 @@ def root(
     ] = False,
 ) -> None:
     level = logging.WARNING if verbose == 0 else logging.INFO if verbose == 1 else logging.DEBUG
+    console_handler = RichHandler(console=err, show_time=False, show_path=False, level=level)
     logging.basicConfig(
-        level=level,
-        format="%(name)s: %(message)s",
-        handlers=[RichHandler(console=err, show_time=False, show_path=False)],
-        force=True,
+        level=level, format="%(name)s: %(message)s", handlers=[console_handler], force=True
     )
 
 
@@ -132,6 +130,86 @@ def index_cmd(
     out.print(
         f"{index!r}: {n_postings:,} postings -> {out_path} "
         f"({out_path.stat().st_size / 2**20:.1f} MiB) in {t_build + t_save:.1f} s"
+    )
+
+
+@app.command("crawl")
+def crawl_cmd(
+    seeds: Annotated[list[str], typer.Argument(help="Start URL(s).")],
+    out_path: Annotated[Path, typer.Option("--out", "-o", help="JSON lines output.")] = Path(
+        "data/crawl.jsonl"
+    ),
+    max_pages: Annotated[int, typer.Option(min=1, help="Stop after N pages.")] = 500,
+    concurrency: Annotated[int, typer.Option(min=1, help="Requests in flight, total.")] = 10,
+    per_host: Annotated[int, typer.Option(min=1, help="Requests in flight per host.")] = 2,
+    delay: Annotated[float, typer.Option(min=0, help="Min seconds between requests to a host.")] = (
+        0.0
+    ),
+    log_path: Annotated[Path, typer.Option("--log", help="Per-URL status log.")] = Path(
+        "crawl.log"
+    ),
+    debug: Annotated[bool, typer.Option(help="asyncio debug mode (reports blocking calls).")] = (
+        False
+    ),
+) -> None:
+    """Crawl politely (robots.txt, per-host limits) and write pages as JSON lines."""
+    import asyncio
+
+    from rich.live import Live
+
+    from findex.crawler.crawl import CrawlStats
+    from findex.crawler.runner import crawl_to_jsonl
+
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    file_handler = logging.FileHandler(log_path, mode="w", encoding="utf-8")
+    file_handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s"))
+    file_handler.setLevel(logging.INFO)
+    for name in ("findex.crawler", "asyncio"):  # asyncio: slow-callback warnings in --debug
+        lg = logging.getLogger(name)
+        lg.addHandler(file_handler)
+        lg.setLevel(logging.INFO if name == "findex.crawler" else logging.DEBUG)
+    stats = CrawlStats()
+
+    def render() -> Table:
+        t = Table(title="findex crawl", show_header=False)
+        t.add_row("pages", f"{stats.pages:,} / {max_pages:,}")
+        t.add_row("pages/s", f"{stats.pages_per_s:.1f}")
+        t.add_row("in flight", str(stats.in_flight))
+        t.add_row("queue", str(stats.queued))
+        t.add_row("errors", str(stats.errors))
+        t.add_row("retries", str(stats.retries))
+        t.add_row("robots.txt skips", str(stats.skipped_robots))
+        return t
+
+    async def main() -> None:
+        with Live(render(), console=err, refresh_per_second=4, transient=True) as live:
+
+            async def ticker() -> None:
+                while True:
+                    live.update(render())
+                    await asyncio.sleep(0.25)
+
+            tick = asyncio.create_task(ticker())
+            try:
+                await crawl_to_jsonl(
+                    seeds,
+                    out_path,
+                    max_pages=max_pages,
+                    concurrency=concurrency,
+                    per_host=per_host,
+                    delay=delay,
+                    stats=stats,
+                )
+            finally:
+                tick.cancel()
+
+    t0 = time.perf_counter()
+    asyncio.run(main(), debug=debug)
+    wall = time.perf_counter() - t0
+    file_handler.close()
+    out.print(
+        f"{stats.pages:,} pages -> {out_path} in {wall:.1f} s ({stats.pages / wall:.1f} pages/s), "
+        f"{stats.errors} errors, {stats.retries} retries, log: {log_path}"
     )
 
 

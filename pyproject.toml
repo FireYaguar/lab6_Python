@@ -1,12 +1,14 @@
 [project]
 name = "findex"
-version = "0.5.0"
+version = "0.6.0"
 description = "findex — a small full-text search engine built step by step (university course)"
 readme = "README.md"
 authors = [{ name = "Student" }]
 requires-python = ">=3.12"
 dependencies = [
+    "httpx>=0.28.1",
     "rich>=15.0.0",
+    "selectolax>=1.0.2",
     "typer>=0.28.0",
 ]
 

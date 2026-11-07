@@ -10,3 +10,6 @@ dist/
 .coverage
 .hypothesis/
 .venv-ft/
+/mirror/
+/crawl*.jsonl
+/crawl.log
