@@ -1,6 +1,6 @@
 # findex
 
-[![CI](https://github.com/OWNER/findex/actions/workflows/ci.yml/badge.svg)](https://github.com/OWNER/findex/actions/workflows/ci.yml)
+[![CI](https://github.com/FireYaguar/lab6_Python/actions/workflows/ci.yml/badge.svg)](https://github.com/FireYaguar/lab6_Python/actions/workflows/ci.yml)
 
 Повнотекстовий пошуковик, який будую протягом семестру (курс «Python — Build a Search Engine», 8 лабораторних).
 Кожна лабораторна — окремий git-тег (`lab-01`, `lab-02`, …).
@@ -474,7 +474,7 @@ findex index data/ --out index.bin       # data/crawl.jsonl читає iter_docu
 - `scripts/make_mirror.py` перетворює корпус з Лаби 1 (вихідні `.rst` документації Python з репозиторію CPython, ліцензія PSF/BSD) на 560 HTML-сторінок. Посилання беруться з `toctree`, `:doc:` і `:mod:`; ~120 з них ведуть на неіснуючі сторінки, як на справжньому сайті.
 - `scripts/mirror_server.py` — мій власний сервер на `127.0.0.1`. Щоб поводитись як справжній віддалений сайт, він має **затримку мережі** 0,1 с × U(0,5; 1,5) на кожну відповідь, **robots.txt** з `Disallow: /whatsnew/`, **rate limit** (понад 100 запитів за секунду → `429` з `Retry-After: 1`) і редирект `/library` → `/library/`.
 
-Сайт мій, тож дозвіл є, а robots.txt все одно виконується (у кожному прогоні 1 пропуск `/whatsnew/`). User-Agent чесний і має адресу для зв'язку: `findex-crawler/0.6 (student project; +https://github.com/OWNER/findex)`. Стеля — `--max-pages`, а домени обмежені тими, що є серед стартових URL.
+Сайт мій, тож дозвіл є, а robots.txt все одно виконується (у кожному прогоні 1 пропуск `/whatsnew/`). User-Agent чесний і має адресу для зв'язку: `findex-crawler/0.6 (student project; +https://github.com/FireYaguar/lab6_Python)`. Стеля — `--max-pages`, а домени обмежені тими, що є серед стартових URL.
 
 Справжній сайт (наприклад, docs.python.org) обходити лише так: спершу прочитати його `robots.txt` (краулер і сам його виконує), далі `--per-host 2 --delay 0.5` і `--max-pages` не більше 500.
 
